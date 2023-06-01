@@ -1,20 +1,30 @@
 import { Typography, TextField, Button, Stack, Card, CardContent } from "@mui/material";
 import { useRef, useCallback, useState } from "react";
+import Blurb from "@/components/blurb";
 
 export default function Home() {
     const blurbRef = useRef("");
     const [generatingPosts, setGeneratingPosts] = useState("");
+    const [blurbsFinishedGenerating, setBlurbsFinishedGenerating] = useState<boolean>(false);
+
+
 
     const generateBlurb = useCallback(async () => {
+        setBlurbsFinishedGenerating(false);
         setGeneratingPosts("");
         let done = false;
+        const prompt = `Generate 3 tweets and clearly labeled "1." , "2." and "3.". 
+                  Follow the following criteria:
+                  1. Each tweet should be based on this context: ${blurbRef.current}
+                  2. Each tweet will have short sentences that are found in Twitter posts. 
+                  3. Each tweet will be strictly less than 280 tokens including spaces, punctuation, emojis and hashtags`;
         const response = await fetch("/api/generateBlurb", {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                prompt: blurbRef.current,
+                prompt: prompt,
             }),
         });
         if (!response.ok) {
@@ -31,6 +41,7 @@ export default function Home() {
             const chunkValue = decoder.decode(value);
             setGeneratingPosts((prev) => prev + chunkValue);
         }
+        setBlurbsFinishedGenerating(true);
     }, [blurbRef.current]);
 
     return (
@@ -63,10 +74,23 @@ export default function Home() {
             ></TextField>
 
             <Button onClick={generateBlurb}>Generate Blurb</Button>
+
             {generatingPosts && (
-                <Card>
-                    <CardContent>{generatingPosts}</CardContent>
-                </Card>
+                <>
+                    <Stack direction="row-reverse" width="100%">
+                        <Typography width="12em" textAlign="center">
+                            Plagiarism Score
+                        </Typography>
+                    </Stack>
+                    {generatingPosts
+                        .substring(generatingPosts.indexOf("1.") + 3)
+                        .split(/2\.|3\./)
+                        .map((generatingPost, index) => {
+                            return (
+                                <Blurb key={index} generatingPost={generatingPost} blurbsFinishedGenerating={blurbsFinishedGenerating}></Blurb>
+                            );
+                        })}
+                </>
             )}
         </Stack>
     );
